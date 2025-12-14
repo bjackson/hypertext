@@ -1,0 +1,31 @@
+[project]
+name = "hypertype"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.14"
+dependencies = [
+    "torch>=2.0.0",
+    "transformers>=4.35.0",
+    "accelerate>=0.26.0",
+    "datasets>=2.14.0",
+    "sentencepiece>=0.1.99",
+    "tqdm>=4.66.0",
+    "pyyaml>=6.0",
+    "numpy>=1.24.0",
+]
+
+
+[dependency-groups]
+dev = ["pyrefly>=0.45.2", "ruff>=0.14.9", "pytest>=7.4.0", "pytest-cov>=4.1.0"]
+
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "tab"
+docstring-code-format = true
+
+[tool.pyrefly]
+project-includes = ["src/*.py", "**/*.ipynb"]

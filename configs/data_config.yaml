@@ -1,0 +1,33 @@
+generator:
+  p_vowel_drop: 0.4
+  p_space_drop: 0.5
+  p_punct_drop: 0.8
+  use_consonant_skeleton: false
+  min_compression_ratio: 0.3
+  max_compression_ratio: 0.7
+
+dataset:
+  # Use Hugging Face datasets instead of local corpus
+  # Can specify multiple datasets - they will be combined
+  datasets:
+    - name: "binhgiangnguyendanh/reddit_casual_conversation_for_alpaca_lora"
+      column: "output"
+      split: "train"
+      streaming: true
+      weight: 1.0  # Relative weight for sampling
+    - name: "clockwork7/reddit_news_articles_comments"
+      column: "response"
+      split: "train"
+      streaming: true
+      weight: 1.0  # Relative weight for sampling
+  
+  
+  lexicon_path: "data/lexicon.json"
+  specs_path: "notes/specs.txt"
+  tsv_path: "data/seed_pairs.tsv"
+  n_synthetic: 500000
+  train_ratio: 0.8
+  val_ratio: 0.1
+  test_ratio: 0.1
+  synthetic_train_ratio: 0.9
+  seed: 42

@@ -1,0 +1,13 @@
+model:
+  name: "google/byt5-small"
+  task_prefix: "expand: "
+  max_input_length: 128
+  max_output_length: 128
+
+inference:
+  num_beams: 5
+  num_return_sequences: 5
+  max_length: 128
+  early_stopping: true
+  no_repeat_ngram_size: 2
+  quantize: false
