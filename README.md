@@ -6,7 +6,8 @@ An offline prototype model that expands shorthand strings into full text using B
 
 - **Offline Inference**: No external APIs required at inference time
 - **Top-K Expansions**: Returns top-5 (configurable) expansion candidates with scores
-- **Synthetic Data Generation**: Generates training data from Hugging Face datasets or local corpus
+- **Synthetic Data Generation**: Generates training data from multiple Hugging Face datasets or local corpus
+- **Multi-Device Support**: Auto-detects and uses MPS (Apple Silicon), CUDA (NVIDIA), or CPU
 - **CPU-Friendly**: Optional quantization for faster CPU inference
 - **Comprehensive Evaluation**: Top-1/Top-K accuracy, CER, Levenshtein distance metrics
 
@@ -24,7 +25,7 @@ pip install -e .
 
 ### 1. Generate Training Data
 
-The default configuration uses the Hugging Face dataset `binhgiangnguyendanh/reddit_casual_conversation_for_alpaca_lora`:
+The default configuration uses multiple Hugging Face datasets for more diverse training data:
 
 ```bash
 # Generate synthetic data (uses configs/data_config.yaml by default)
@@ -39,41 +40,70 @@ python cli.py generate-data \
   --streaming
 ```
 
+The default config uses:
+
+- `binhgiangnguyendanh/reddit_casual_conversation_for_alpaca_lora` (output column)
+- `clockwork7/reddit_news_articles_comments` (response column)
+
+You can configure multiple datasets in `configs/data_config.yaml` with different weights.
+
 ### 2. Train the Model
 
 ```bash
+# Auto-detect best device (MPS > CUDA > CPU)
 python cli.py train --config configs/train_config.yaml
+
+# Explicitly specify device (mps, cuda, or cpu)
+python cli.py train --config configs/train_config.yaml --device mps
 ```
 
 This will:
 
 - Load ByT5-small from Hugging Face (downloads once, then cached)
+- Auto-detect and use the best available device (MPS for Apple Silicon, CUDA for NVIDIA GPUs, or CPU)
 - Train on the generated dataset
 - Save checkpoints to `models/byt5-shorthand-v1/`
 
 ### 3. Evaluate
 
 ```bash
+# Auto-detect device
 python cli.py eval \
   --model models/byt5-shorthand-v1 \
   --test data/test.jsonl \
   --k 5
+
+# Specify device explicitly
+python cli.py eval \
+  --model models/byt5-shorthand-v1 \
+  --test data/test.jsonl \
+  --k 5 \
+  --device mps
 ```
 
 ### 4. Expand Shorthand
 
 ```bash
-# Interactive expansion
+# Interactive expansion (auto-detects device)
 python cli.py expand "ruavailrn" \
   --model models/byt5-shorthand-v1 \
   --k 5
 
-# Batch expansion
+# Batch expansion (auto-detects device)
 python cli.py expand-batch \
   --input test_inputs.txt \
   --output predictions.jsonl \
   --model models/byt5-shorthand-v1 \
   --k 5
+
+# Use quantized model for faster CPU inference
+python cli.py expand-batch \
+  --input test_inputs.txt \
+  --output predictions.jsonl \
+  --model models/byt5-shorthand-v1 \
+  --k 5 \
+  --quantize \
+  --device cpu
 ```
 
 ## Project Structure
@@ -119,9 +149,26 @@ hypertype/
 
 ### Data Generation (`configs/data_config.yaml`)
 
-- **Hugging Face Dataset**: Configure `dataset_name`, `column_name`, `split`, and `streaming`
+- **Multiple Hugging Face Datasets**: Configure a list of datasets with `name`, `column`, `split`, `streaming`, and `weight` for each
 - **Generator Parameters**: Vowel drop probability, space drop, punctuation drop, etc.
 - **Dataset Splits**: Train/val/test ratios
+
+Example multi-dataset configuration:
+
+```yaml
+dataset:
+  datasets:
+    - name: "dataset1/name"
+      column: "output"
+      split: "train"
+      streaming: true
+      weight: 1.0
+    - name: "dataset2/name"
+      column: "response"
+      split: "train"
+      streaming: true
+      weight: 1.0
+```
 
 ### Training (`configs/train_config.yaml`)
 
@@ -140,11 +187,12 @@ hypertype/
 ```python
 from src.inference.expander import expand
 
-# Expand shorthand
+# Expand shorthand (auto-detects device: MPS > CUDA > CPU)
 results = expand(
     shorthand="ruavailrn",
     model_path="models/byt5-shorthand-v1",
     k=5,
+    device=None,  # None = auto-detect, or specify "mps", "cuda", "cpu"
     quantize=False,  # Set to True for faster CPU inference
 )
 
