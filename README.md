@@ -84,10 +84,16 @@ python cli.py eval \
 ### 4. Expand Shorthand
 
 ```bash
-# Interactive expansion (auto-detects device)
+# Single expansion (auto-detects device)
 python cli.py expand "ruavailrn" \
   --model models/byt5-shorthand-v1 \
   --k 5
+
+# Interactive mode: continuously type shorthand and see results
+python cli.py expand --interactive \
+  --model models/byt5-shorthand-v1 \
+  --k 5
+# Then type shorthand and press Enter, or type "exit" to quit
 
 # Batch expansion (auto-detects device)
 python cli.py expand-batch \

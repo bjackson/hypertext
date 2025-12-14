@@ -261,12 +261,12 @@ def cmd_eval(args):
 	# Print summary
 	agg = results['aggregated']
 	print('\n=== Evaluation Results ===')
-	print(f"Top-1 Exact Match: {agg['top1_exact_match']:.4f}")
-	print(f"Top-{k} Exact Match: {agg['topk_exact_match']:.4f}")
-	print(f"Avg CER: {agg['avg_cer']:.4f}")
-	print(f"Avg Levenshtein Distance: {agg['avg_levenshtein']:.2f}")
-	print(f"Avg Normalized Edit Distance: {agg['avg_normalized_edit_distance']:.4f}")
-	print(f"Number of examples: {agg['num_examples']}")
+	print(f'Top-1 Exact Match: {agg["top1_exact_match"]:.4f}')
+	print(f'Top-{k} Exact Match: {agg["topk_exact_match"]:.4f}')
+	print(f'Avg CER: {agg["avg_cer"]:.4f}')
+	print(f'Avg Levenshtein Distance: {agg["avg_levenshtein"]:.2f}')
+	print(f'Avg Normalized Edit Distance: {agg["avg_normalized_edit_distance"]:.4f}')
+	print(f'Number of examples: {agg["num_examples"]}')
 
 	# Save detailed results if requested
 	if args.output:
@@ -279,6 +279,7 @@ def cmd_expand(args):
 	"""Expand shorthand interactively."""
 	model_path = args.model
 	shorthand = args.shorthand
+	interactive = args.interactive
 	k = args.k or 5
 	quantize = args.quantize
 	# Auto-detect device if not specified
@@ -293,6 +294,66 @@ def cmd_expand(args):
 		else:
 			device = 'cpu'
 
+	# Interactive mode: continuous input loop
+	if interactive or not shorthand:
+		print(f'Interactive mode (device: {device})')
+		print('Type shorthand and press Enter to expand. Type "exit" or "quit" to stop.')
+		print('Press Ctrl+C to exit.\n')
+
+		# Load model once (will be cached)
+		if not shorthand:
+			# Load model with a dummy input to initialize
+			expand(
+				shorthand='test',
+				k=k,
+				model_path=model_path,
+				quantize=quantize,
+				device=device,
+			)
+
+		try:
+			while True:
+				try:
+					# Read input
+					user_input = input('> ').strip()
+
+					# Check for exit commands
+					if user_input.lower() in ['exit', 'quit', 'q']:
+						print('Goodbye!')
+						break
+
+					# Skip empty input
+					if not user_input:
+						continue
+
+					# Expand
+					results = expand(
+						shorthand=user_input,
+						k=k,
+						model_path=None,  # Use cached model
+						quantize=quantize,
+						device=device,
+					)
+
+					# Display results
+					print(f'\nTop-{k} expansions:')
+					for i, result in enumerate(results, 1):
+						print(f'  {i}. {result["text"]} (score: {result["score"]:.4f})')
+					print()  # Blank line for readability
+
+				except KeyboardInterrupt:
+					print('\nGoodbye!')
+					break
+				except EOFError:
+					print('\nGoodbye!')
+					break
+				except Exception as e:
+					print(f'Error: {e}\n')
+		except KeyboardInterrupt:
+			print('\nGoodbye!')
+		return
+
+	# Single expansion mode
 	print(f'Expanding: {shorthand} (device: {device})')
 
 	results = expand(
@@ -305,7 +366,7 @@ def cmd_expand(args):
 
 	print(f'\nTop-{k} expansions:')
 	for i, result in enumerate(results, 1):
-		print(f"{i}. {result['text']} (score: {result['score']:.4f})")
+		print(f'{i}. {result["text"]} (score: {result["score"]:.4f})')
 
 
 def cmd_expand_batch(args):
@@ -418,13 +479,16 @@ def main():
 	eval_parser.add_argument('--output', type=str, help='Output JSON path for detailed results')
 
 	# expand
-	expand_parser = subparsers.add_parser('expand', help='Expand shorthand interactively')
-	expand_parser.add_argument('shorthand', type=str, help='Shorthand to expand')
+	expand_parser = subparsers.add_parser('expand', help='Expand shorthand (single or interactive mode)')
+	expand_parser.add_argument('shorthand', type=str, nargs='?', help='Shorthand to expand (optional if --interactive)')
 	expand_parser.add_argument('--model', type=str, required=True, help='Path to model checkpoint')
 	expand_parser.add_argument('--k', type=int, default=5, help='Number of candidates')
 	expand_parser.add_argument('--quantize', action='store_true', help='Use quantized model')
 	expand_parser.add_argument(
 		'--device', type=str, default=None, help='Device (cpu/cuda/mps, or auto-detect if not specified)'
+	)
+	expand_parser.add_argument(
+		'--interactive', action='store_true', help='Enter interactive mode for continuous expansion'
 	)
 
 	# expand-batch
